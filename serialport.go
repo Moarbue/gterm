@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/albenik/go-serial/v2"
@@ -10,6 +9,7 @@ import (
 type serial_port struct {
 	serialport *serial.Port
 	serialopts serial_options
+	isOpen     bool
 }
 
 type serial_options struct {
@@ -44,8 +44,10 @@ func (sp *serial_port) start(portname string, baudrate int) {
 	sp.serialopts.readtimeout = 1000
 	sp.serialopts.writetimeout = 1000
 	sp.serialopts.stopbits = serial.OneStopBit
+	sp.isOpen = false
 	sp.change_port(portname)
 	sp.apply_options()
+	sp.isOpen = true
 }
 
 func (sp *serial_port) configure(baudrate int, databits int, HUPCL bool, parity serial.Parity, readtimeout int, writetimeout int, stopbits serial.StopBits) {
@@ -61,6 +63,7 @@ func (sp *serial_port) configure(baudrate int, databits int, HUPCL bool, parity 
 }
 
 func (sp *serial_port) change_port(portname string) {
+	sp.isOpen = false
 	sp.serialport.Close()
 
 	port, err := serial.Open(portname)
@@ -70,6 +73,7 @@ func (sp *serial_port) change_port(portname string) {
 
 	sp.serialport = port
 	sp.apply_options()
+	sp.isOpen = true
 }
 
 func (sp *serial_port) change_baudrate(baudrate int) {
@@ -80,20 +84,6 @@ func (sp *serial_port) change_baudrate(baudrate int) {
 func (sp *serial_port) change_parity(parity serial.Parity) {
 	sp.serialopts.parity = parity
 	sp.apply_options()
-}
-
-func (sp *serial_port) read_line() string {
-	buff := make([]byte, 1024)
-	for {
-		n, err := sp.serialport.Read(buff)
-		if err != nil {
-			log.Fatal(err)
-		}
-		if n == 0 {
-			fmt.Println("\nEOF")
-		}
-		return string(buff[:n])
-	}
 }
 
 func (sp *serial_port) apply_options() {
